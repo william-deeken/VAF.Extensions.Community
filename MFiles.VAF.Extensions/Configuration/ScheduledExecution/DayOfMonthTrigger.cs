@@ -176,7 +176,12 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 				// get the desired date for THIS month.
 				int thisMonth_Date = GetVariableDateOfMonth(after, nthWeekday, dayOfWeek);
 				// get the desired date for NEXT runtime (next month or otherwise, depending on UnrepresentableDateHandling).
-				DateTimeOffset nextRuntime_Date = GetNextMonthWithValidVariableDate(after, unrepresentableDateHandling, nthWeekday, dayOfWeek);
+				DateTimeOffset? nextRuntime_Date = GetNextMonthWithValidVariableDate(after, unrepresentableDateHandling, nthWeekday, dayOfWeek);
+				if (!nextRuntime_Date.HasValue)
+				{
+					// return no values.
+					yield break;
+				}
 				// If thisMonth_Date == -1, determine how to handle via UnrepresentableDateHandling
 				if (thisMonth_Date == -1)
 				{
@@ -189,20 +194,20 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 						// If this is TODAY, return the next run also.
 						if (thisMonth_RunDate.Day == after.Day)
 						{
-							yield return nextRuntime_Date;
+							yield return nextRuntime_Date.Value;
 						}
 					}
 					else
 					{
 						// Skip this month entirely. Return next runtime.
-						yield return nextRuntime_Date;
+						yield return nextRuntime_Date.Value;
 					}
 				}
 				// if thisMonth_Date = today, then return it AND return the next run next month.
 				else if (thisMonth_Date == after.Day)
 				{
 					yield return after;
-					yield return nextRuntime_Date;
+					yield return nextRuntime_Date.Value;
 
 				}
 				// if thisMonth_Date is later this month, return it.
@@ -213,7 +218,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 				else
 				{
 					// Return only next month's run.
-					yield return nextRuntime_Date;
+					yield return nextRuntime_Date.Value;
 				}
 			}
 			else {
@@ -326,11 +331,14 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 		/// <param name="nthWeekday"></param>
 		/// <param name="dayOfWeek"></param>
 		/// <returns></returns>
-		internal static DateTimeOffset GetNextMonthWithValidVariableDate(DateTimeOffset after, UnrepresentableDateHandling unrepresentableDateHandling, int nthWeekday, DayOfWeek dayOfWeek)
+		internal static DateTimeOffset? GetNextMonthWithValidVariableDate(DateTimeOffset after, UnrepresentableDateHandling unrepresentableDateHandling, int nthWeekday, DayOfWeek dayOfWeek)
 		{
 			DateTimeOffset? returnValue = null;
 			// Get next runtime.
-			
+			if(nthWeekday < 1 || nthWeekday > 5)
+			{
+				return null;
+			}
 			var sanity = 0;
 			// Guarenteed to find a 1-5th weekday within a year. 
 			while (sanity++ < 13)
