@@ -270,15 +270,394 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				UnrepresentableDateHandling.LastDayOfMonth,
 				new DateTimeOffset?[] { new DateTimeOffset(2024, 02, 29, 0, 0, 0, 0, TimeSpan.Zero) }
 			};
-			// Variable Day: -1st Saturday of March -> Invalid
-			//yield return new object[]
-			//{
-			//	new DateTimeOffset(2025, )
-			//}
+
+			/*
+			 Three Main Cases (not including Invalids): 
+				A: Cur Date < This Month Run Date - Get This Month's run (or skip/EoM if scheduled date DNE)
+				B: Cur Date > This Month Run Date - Only return next month's run.  
+				C: Cur Date = This Month Run Date - This Month's run (Either b/c of normal sched or because of EoM) & Next Month's Run.
+			 
+			 */
+			// INVALID: -1st Sat of Month -> null
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 5, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[0],
+				DayOfMonthTriggerType.VariableDate,
+				-1,
+				DayOfWeek.Saturday
+			};
+			// INVALID: 6th Sat of Month -> null
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 5, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[0],
+				DayOfMonthTriggerType.VariableDate,
+				6,
+				DayOfWeek.Saturday
+			};
+			// Case A - Normal - 1st Sun 
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,2,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				1,
+				DayOfWeek.Sunday
+			};
+			// Case A - Normal - 2nd Tuesday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 2, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,11,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				2,
+				DayOfWeek.Tuesday
+			};
+			// Case A - Normal - 4th Friday (last day)
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 3, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,28,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				4,
+				DayOfWeek.Friday
+			};
+			// Case A - DNE - EoM - 5th Saturday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,28,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Saturday
+			};
+			// Case A - DNE - EoM - 5th Friday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,28,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Friday
+			};
+			// A - DNE - SKIP - 5th Saturday - Skip 1 Month
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 4,0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 3,29,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Saturday
+			};
+			// A - DNE - SKIP - 5th Tuesday- Skip 2 Months
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 4,29,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Tuesday
+			};
+			// A- EoY - DNE - EoM - 5th Friday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12,31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Friday
+			};
+			// A - EoY - DNE - SKIP - 5th Friday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 1,30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Friday
+			};
+			// A- EoY - DNE - SKIP - 5th Sunday - skip 3 months
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 4, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 3,29,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Sunday
+			};
+			// B - Normal - 1st Sun
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 20, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,2,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				1,
+				DayOfWeek.Sunday
+			};
+			// B - Normal - 2nd Tuesday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 20, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,11,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				2,
+				DayOfWeek.Tuesday
+			};
+			// B-Normal - 4th Friday (last day)
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 25, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,28,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				4,
+				DayOfWeek.Friday
+			};
+			// B - DNE - EoM - 5th Thursday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 31, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2,28,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Thursday
+			};
+			// B - DNE - SKIP - 5th Wednesday - Skip 2 Months
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 30, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 4,30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Wednesday
+			};
+			// B - EoY - Normal - 4th Thursday 
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 28, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 1,22,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				4,
+				DayOfWeek.Thursday
+			};
+			// B - EoY -DNE - SKIP - 5th Saturday Skip 2 Months from Nov
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 11, 30, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 1, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Saturday
+			};
+			// B - EoY DNE - EoM - 5th Monday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 30, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 1, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Monday
+			};
+			// B - EoY DNE -SKIP - 5th Monday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 30, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2026, 3, 30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Monday
+			};
+			// C - Normal - 1st Wednesday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 2, 5, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 2, 5,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 3, 5,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				1,
+				DayOfWeek.Wednesday
+			};
+			// C - Normal - 3rd Sunday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 3, 16, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 3, 16,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 4, 20,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				3,
+				DayOfWeek.Sunday
+			};
+			// C - Next Month DNE - SKIP- 5th Thursday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 5, 29, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 5, 29,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 7, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Thursday
+			};
+			// C - 2 Months DNE - SKIP - 5th Friday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 5, 30, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 5, 30,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 8, 29,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Friday
+			};
+			// C - Next Month DNE - EoM - 5th Thurs
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 5,29, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 5, 29,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 6, 30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Thursday
+			};
+			// C - This  Month DNE - EoM - 5th Monday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 5,31, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 5, 31,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2025, 6, 30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Monday
+			};
+			// C - EoY - Normal - 3rd Saturday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12,20, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12, 20,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 1, 17,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				3,
+				DayOfWeek.Saturday
+			};
+			// C - EoY - Next Month DNE - 5th Monday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12,29, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12, 29,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 3, 30,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Monday
+			};
+			// C - EoY - Next Month DNE - EoM - 5th Monday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12,29, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12, 29,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 1, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Monday
+			};
+			// C - EoY  -This Month DNE -   EoM - 5th Thurday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12,31, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12, 31,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 1, 29,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Thursday
+			};
+			// C - EoY - This AND Next Month DNE - EoM - 5th Sunday
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12,31, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.LastDayOfMonth,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 12, 31,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 1, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Sunday
+			};
+			// C - EoY(Nov) - Next Month DNE - SKIP
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 11,29, 0, 0, 0, TimeSpan.Zero),
+				-1,
+				UnrepresentableDateHandling.Skip,
+				new DateTimeOffset?[]{ new DateTimeOffset(2025, 11, 29,0,0,0,TimeSpan.Zero),
+									   new DateTimeOffset(2026, 1, 31,0,0,0,TimeSpan.Zero)},
+				DayOfMonthTriggerType.VariableDate,
+				5,
+				DayOfWeek.Saturday
+			};
+			
 		}
 		public static IEnumerable<object[]> GetVariableDateOfMonthData()
 		{
-			// -1st Wednesday (Invalid) -> -1
+			//Test Case #1: -1st Wednesday (Invalid) -> -1
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 2, 23, 1, 2, 3, TimeSpan.Zero),
@@ -286,7 +665,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Wednesday,
 				-1
 			};
-			// 6th Thursday (Invalid) -> -1
+			//Test Case #2: 6th Thursday (Invalid) -> -1
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 2, 23, 1, 2, 3, TimeSpan.Zero),
@@ -294,7 +673,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Thursday,
 				-1
 			};
-			// 1st Friday of Jan 2025 -> 3
+			//Test Case #3: 1st Friday of Jan 2025 -> 3
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 23, 1, 2, 3, TimeSpan.Zero),
@@ -302,7 +681,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Friday,
 				3
 			};
-			// 1st Wednesday of Jan 2025 (1st of the month) -> 1
+			//Test Case #4 1st Wednesday of Jan 2025 (1st of the month) -> 1
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 23, 1, 2, 3, TimeSpan.Zero),
@@ -310,7 +689,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Wednesday,
 				1
 			};
-			// 2nd Thursday of Jan 2025 -> 9
+			//Test Case #5: 2nd Thursday of Jan 2025 -> 9
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 3, 1, 2, 3, TimeSpan.Zero),
@@ -318,7 +697,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Thursday,
 				9
 			};
-			// 2nd Wednesday of Jan 2025 -> 8
+			//Test Case: #6 2nd Wednesday of Jan 2025 -> 8
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -326,7 +705,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Wednesday,
 				8
 			};
-			// 1st Tuesday of Jan 2025 -> 7
+			//Test Case #7: 1st Tuesday of Jan 2025 -> 7
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -334,7 +713,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Tuesday,
 				7
 			};
-			// 4th Monday of Jan 2025 -> 27
+			//Test Case #8: 4th Monday of Jan 2025 -> 27
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -342,7 +721,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Monday,
 				27
 			};
-			// 5th Wednesday of Jan 2025 -> 27
+			//Test Case #9: 5th Wednesday of Jan 2025 -> 27
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -350,7 +729,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Wednesday,
 				29
 			};
-			// 5th Friday of Jan 2025 (Last day of month) -> 31
+			//Test Case #10: 5th Friday of Jan 2025 (Last day of month) -> 31
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -358,7 +737,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Friday,
 				31
 			};
-			// 5th Saturday of Jan 2025 (Does not exist) -> -1
+			//Test Case #11: 5th Saturday of Jan 2025 (Does not exist) -> -1
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -366,7 +745,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday, 
 				-1
 			};
-			// 5th Monday of Jan 2025 (Does not exist) -> -1
+			//Test Case #12: 5th Monday of Jan 2025 (Does not exist) -> -1
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 13, 1, 2, 3, TimeSpan.Zero),
@@ -374,7 +753,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Monday, 
 				-1
 			};
-			// Feb Testing: 4th Friday of Feb 2025 -> 28
+			//Test Case #13: Feb Testing: 4th Friday of Feb 2025 -> 28
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 2, 13, 1, 2, 3, TimeSpan.Zero),
@@ -382,7 +761,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Friday, 
 				28
 			};
-			// Feb Testing: 4th Saturday of Feb 2025 -> 22
+			//Test Case #14: Feb Testing: 4th Saturday of Feb 2025 -> 22
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 2, 13, 1, 2, 3, TimeSpan.Zero),
@@ -390,7 +769,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday,
 				22
 			};
-			// Feb Testing: 5th Saturday of Feb 2025 (Does not exist) -> -1 
+			//Test Case #15: Feb Testing: 5th Saturday of Feb 2025 (Does not exist) -> -1 
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 2, 13, 1, 2, 3, TimeSpan.Zero),
@@ -398,7 +777,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday,
 				-1
 			};
-			// Feb Testing LEAP YEAR: 4th Monday of Feb 2028-> 28
+			//Test Case #16: Feb Testing LEAP YEAR: 4th Monday of Feb 2028-> 28
 			yield return new object[]
 			{
 				new DateTimeOffset(2028, 2, 13, 1, 2, 3, TimeSpan.Zero),
@@ -406,7 +785,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Monday,
 				28
 			};
-			// Feb Testing LEAP YEAR: 5th Tuesday of Feb 2028-> 29
+			//Test Case #17: Feb Testing LEAP YEAR: 5th Tuesday of Feb 2028-> 29
 			yield return new object[]
 			{
 				new DateTimeOffset(2028, 2, 13, 1, 2, 3, TimeSpan.Zero),
@@ -414,7 +793,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Tuesday,
 				29
 			};
-			// End of year: 5th Wed of Dec 2025 -> 31
+			//Test Case #18: End of year: 5th Wed of Dec 2025 -> 31
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 12, 13, 1, 2, 3, TimeSpan.Zero),
@@ -434,7 +813,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 		}
 		public static IEnumerable<object[]> GetNextMonthWithValidVariableDateData()
 		{
-			// Unrepresentable = SKIP - Jan 2025 - 1st Saturday -> 1 Feb 2025 
+			//Test Case #1: Unrepresentable = SKIP - Jan 2025 - 1st Saturday -> 1 Feb 2025 
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -443,7 +822,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday,
 				new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 1st Sunday -> 2 Feb 2025
+			//Test Case #2: Unrepresentable = SKIP - Jan 2025 - 1st Sunday -> 2 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -452,7 +831,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Sunday,
 				new DateTimeOffset(2025, 2, 2, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 2ND Sunday -> 9 Feb 2025
+			//Test Case #3: Unrepresentable = SKIP - Jan 2025 - 2ND Sunday -> 9 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -461,7 +840,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Sunday,
 				new DateTimeOffset(2025, 2, 9, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 3ND Sunday -> 16 Feb 2025
+			//Test Case #4: Unrepresentable = SKIP - Jan 2025 - 3rd Sunday -> 16 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -470,7 +849,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Sunday,
 				new DateTimeOffset(2025, 2, 16, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 4TH Sunday -> 23 Feb 2025
+			//Test Case #5: Unrepresentable = SKIP - Jan 2025 - 4TH Sunday -> 23 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -479,7 +858,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Sunday,
 				new DateTimeOffset(2025, 2, 23, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 4TH Friday -> 28 Feb 2025
+			//Test Case #6: Unrepresentable = SKIP - Jan 2025 - 4TH Friday -> 28 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -488,7 +867,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Friday,
 				new DateTimeOffset(2025, 2, 28, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 5TH Saturday (Invalid, Skip Feb) -> 29 March 2025
+			//Test Case 7: Unrepresentable = SKIP - Jan 2025 - 5TH Saturday (Invalid, Skip Feb) -> 29 March 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -497,16 +876,8 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday,
 				new DateTimeOffset(2025, 3, 29, 0, 0, 0, TimeSpan.Zero)
 			};
-			// Unrepresentable = SKIP - Jan 2025 - 5TH Wednesday (Invalid, Skip Feb AND Skip Mar) -> 30 April 2025
-			yield return new object[]
-			{
-				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
-				UnrepresentableDateHandling.Skip,
-				5,
-				DayOfWeek.Wednesday,
-				new DateTimeOffset(2025, 4, 30, 0, 0, 0, TimeSpan.Zero)
-			};
-			// Unrepresentable = EndOfMonth - Jan 2025 - 5TH Saturday (Invalid, use end of month) -> 28 Feb 2025
+
+			//Test Case 8: Unrepresentable = EndOfMonth - Jan 2025 - 5TH Saturday (Invalid, use end of month) -> 28 Feb 2025
 			yield return new object[]
 			{
 				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -515,7 +886,16 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Saturday,
 				new DateTimeOffset(2025, 2, 28, 0, 0, 0, TimeSpan.Zero)
 			};
-			// LEAP YEAR - Unrepresentable = SKIP - Jan 2028 - 5th Tuesday -> 29 Feb 2028
+			//Test Case 9: Unrepresentable = SKIP - Jan 2025 - 5TH Wednesday (Invalid, Skip Feb AND Skip Mar) -> 30 April 2025
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 1, 1, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.Skip,
+				5,
+				DayOfWeek.Wednesday,
+				new DateTimeOffset(2025, 4, 30, 0, 0, 0, TimeSpan.Zero)
+			};
+			//Test Case 10: LEAP YEAR - Unrepresentable = SKIP - Jan 2028 - 5th Tuesday -> 29 Feb 2028
 			yield return new object[]
 			{
 				new DateTimeOffset(2028, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -524,7 +904,7 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Tuesday,
 				new DateTimeOffset(2028, 2, 29, 0, 0, 0, TimeSpan.Zero)
 			};
-			// LEAP YEAR - Unrepresentable = SKIP - Jan 2028 - 5th Wednesday (DNE)-> 29 Mar 2028
+			//Test Case 11: LEAP YEAR - Unrepresentable = SKIP - Jan 2028 - 5th Wednesday (DNE)-> 29 Mar 2028
 			yield return new object[]
 			{
 				new DateTimeOffset(2028, 1, 1, 1, 2, 3, TimeSpan.Zero),
@@ -533,6 +913,52 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				DayOfWeek.Wednesday,
 				new DateTimeOffset(2028, 3, 29, 0, 0, 0, TimeSpan.Zero)
 			};
+			//Test Case 12: LEAP YEAR - Unrepresentable = EoM - Jan 2028 - 5th Wednesday (DNE)-> 29 Feb 2028
+			yield return new object[]
+			{
+				new DateTimeOffset(2028, 1, 1, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.LastDayOfMonth,
+				5,
+				DayOfWeek.Wednesday,
+				new DateTimeOffset(2028, 2, 29, 0, 0, 0, TimeSpan.Zero)
+			};
+			//Test Case 13: EoY - Unrepresentable = Skip - Dec 2025 - 5th Saturday (DNE)-> 31 Jan 2026
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 1, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.Skip,
+				5,
+				DayOfWeek.Saturday,
+				new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)
+			};
+			//Test Case 14: EoY - Unrepresentable = Skip - Nov 2025 - 5th Friday (DNE)-> 30 Jan 2026
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 11, 10, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.Skip,
+				5,
+				DayOfWeek.Friday,
+				new DateTimeOffset(2026, 1, 30, 0, 0, 0, TimeSpan.Zero)
+			};
+			//Test Case 15: EoY - Unrepresentable = Skip - DEC 2025 - 5th Tuesday (DNE)-> 31 Mar 2026
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 10, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.Skip,
+				5,
+				DayOfWeek.Tuesday,
+				new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)
+			};
+			//Test Case 16: EoY - Unrepresentable = EoM - DEC 2025 - 5th Tuesday (DNE)-> 31 Jan 2026
+			yield return new object[]
+			{
+				new DateTimeOffset(2025, 12, 10, 1, 2, 3, TimeSpan.Zero),
+				UnrepresentableDateHandling.LastDayOfMonth,
+				5,
+				DayOfWeek.Tuesday,
+				new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero)
+			};
+
 
 
 		}
