@@ -113,7 +113,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			if (
 				(null == this.TriggerTimes || 0 == this.TriggerTimes.Count)
 				||
-				(null == this.TriggerDays || 0 == this.TriggerDays.Count)
+				(this.DayType == DayOfMonthTriggerType.SpecificDate && (null == this.TriggerDays || 0 == this.TriggerDays.Count))
 				)
 				return null;
 
@@ -127,7 +127,10 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			after = TimeZoneInfo.ConvertTime(after.Value, timeZoneInfo);
 
 			// Get the times to run, filtered to those in the future.
-			return this.TriggerDays
+			// Specific Date - iterate over trigger days.
+			if(this.DayType == DayOfMonthTriggerType.SpecificDate)
+			{
+				return this.TriggerDays
 				.SelectMany
 				(
 					d => GetNextDayOfMonth(after.Value, d, this.UnrepresentableDateHandling, this.DayType, this.nthDay, this.weekday)
@@ -142,6 +145,23 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 				.OrderBy(d => d)
 				.Select(d => d.ToUniversalTime())
 				.FirstOrDefault();
+			}
+			// Variable Date - do not iterate over trigger days.
+			else
+			{
+				return GetNextDayOfMonth(after.Value, -1, this.UnrepresentableDateHandling, this.DayType, this.nthDay, this.weekday)
+				.Select
+				(
+					d => new DailyTrigger() { Type = ScheduleTriggerType.Daily, TriggerTimes = this.TriggerTimes }
+						.GetNextExecutionIncludingNextDay(d, timeZoneInfo, false)
+				)
+				.Where(d => d > after.Value)
+				.Select(d => d.Value)
+				.OrderBy(d => d)
+				.Select(d => d.ToUniversalTime())
+				.FirstOrDefault();
+			}
+			
 		}
 
 		/// <summary>
