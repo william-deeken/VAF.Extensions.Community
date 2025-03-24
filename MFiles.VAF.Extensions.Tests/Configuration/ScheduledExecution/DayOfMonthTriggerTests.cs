@@ -83,8 +83,8 @@ namespace MFiles.VAF.Extensions.Tests.ScheduledExecution
 				{
 					TriggerTimes = triggerTimes.ToList(),
 					DayType = type, 
-					nthDay = nthWeekday,
-					weekday = dayOfWeek,
+					NthDay = nthWeekday,
+					Weekday = dayOfWeek,
 					UnrepresentableDateHandling = unrep
 				}.GetNextExecution(after, TimeZoneInfo.Utc);
 			}

@@ -44,15 +44,16 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 		/// <summary>
 		/// Triggered on a specific date of the month, or the nth weekday of the month?
 		/// If set to SpecificDate, show TriggerDays config.
-		/// If set to VariableDate, show 
+		/// If set to VariableDate, show weekday and nthday
 		/// </summary>
 		[DataMember]
 		[JsonConfEditor
 		(
 			Label = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_MonthlyTrigger_DayType_Label),
-			HelpText = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_MonthlyTrigger_DayType_HelpText)
+			HelpText = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_MonthlyTrigger_DayType_HelpText),
+			DefaultValue = DayOfMonthTriggerType.SpecificDate
 		)]
-		public DayOfMonthTriggerType DayType { get; set; }
+		public DayOfMonthTriggerType DayType { get; set; } = DayOfMonthTriggerType.SpecificDate;
 
 		/// <summary>
 		/// The days of the month to trigger the schedule.
@@ -66,7 +67,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			Label = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_DayOfMonthTrigger_TriggerDays_Label),
 			HelpText = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_DayOfMonthTrigger_TriggerDays_HelpText),
 			ChildName = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_DayOfMonthTrigger_TriggerDays_ChildName),
-			ShowWhen = ".parent._children{.key == 'DayType' && .value == 'SpecificDate' }"
+			ShowWhen = ".parent._children{.key == 'DayType' && (!.value || .value != 'VariableDate') }"
 		)]
 		public List<int> TriggerDays { get; set; } = new List<int>();
 
@@ -82,7 +83,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			HelpText = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_DayOfMonthTrigger_NthDay_HelpText),
 			ShowWhen = ".parent._children{.key == 'DayType' && .value == 'VariableDate' }"
 		)]
-		public int nthDay { get; set; }
+		public int NthDay { get; set; }
 
 		/// <summary>
 		/// The weekday on which to trigger the schedule.
@@ -95,7 +96,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			Label = ResourceMarker.Id + nameof(Resources.Configuration.Schedule_DayOfMonthTrigger_Weekday_Label),
 			ShowWhen = ".parent._children{.key == 'DayType' && .value == 'VariableDate' }"
 		)]
-		public DayOfWeek weekday { get; set; }
+		public DayOfWeek Weekday { get; set; }
 
 
 		/// <summary>
@@ -133,7 +134,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 				return this.TriggerDays
 				.SelectMany
 				(
-					d => GetNextDayOfMonth(after.Value, d, this.UnrepresentableDateHandling, this.DayType, this.nthDay, this.weekday)
+					d => GetNextDayOfMonth(after.Value, d, this.UnrepresentableDateHandling, this.DayType, this.NthDay, this.Weekday)
 				)
 				.Select
 				(
@@ -149,7 +150,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 			// Variable Date - do not iterate over trigger days.
 			else
 			{
-				return GetNextDayOfMonth(after.Value, -1, this.UnrepresentableDateHandling, this.DayType, this.nthDay, this.weekday)
+				return GetNextDayOfMonth(after.Value, -1, this.UnrepresentableDateHandling, this.DayType, this.NthDay, this.Weekday)
 				.Select
 				(
 					d => new DailyTrigger() { Type = ScheduleTriggerType.Daily, TriggerTimes = this.TriggerTimes }
@@ -404,7 +405,7 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 		public override string ToString(TriggerTimeType triggerTimeType, TimeZoneInfo customTimeZone)
 		{
 			// Sanity.
-			if (null == this.TriggerDays || this.TriggerDays.Count == 0)
+			if (this.DayType == DayOfMonthTriggerType.SpecificDate && (null == this.TriggerDays || this.TriggerDays.Count == 0))
 				return null;
 			if (null == this.TriggerTimes || this.TriggerTimes.Count == 0)
 				return null;
@@ -418,11 +419,26 @@ namespace MFiles.VAF.Extensions.ScheduledExecution
 					times += " (UTC)";
 				else
 					times += $" ({customTimeZone.DisplayName})";
-			return Resources.Schedule.Triggers_DayOfMonthTrigger.EscapeXmlForDashboard
+			if (this.DayType == DayOfMonthTriggerType.VariableDate)
+			{
+				return Resources.Schedule.Triggers_DayOfMonthTrigger_VariableDate.EscapeXmlForDashboard
+				(
+					System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName != "en" ? this.NthDay.ToString() : 
+					(this.NthDay == 1 ? "1st" : (this.NthDay == 2 ? "2nd": (this.NthDay == 3 ? "3rd": (this.NthDay > 0 && this.NthDay < 6 ? this.NthDay.ToString() + "th": this.NthDay.ToString())))),
+					this.Weekday,
+					times
+				);
+			}
+			// specific date.
+			else
+			{
+				return Resources.Schedule.Triggers_DayOfMonthTrigger_SpecificDate.EscapeXmlForDashboard
 				(
 					string.Join(", ", this.TriggerDays.OrderBy(t => t)),
 					times
 				);
+			}
+			
 		}
 	}
 }
